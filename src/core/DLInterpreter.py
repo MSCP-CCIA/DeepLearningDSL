@@ -1,10 +1,9 @@
-import sys
 import numpy as np
 from src.generated.DLVisitor import DLVisitor
 from src.generated.DLParser import DLParser
 from src.backend.MatrixLib import MatrixLib
-from src.backend.TFWrapper import TFWrapper  # <--- Nuevo
-from src.backend.StandardLib import StandardLib  # <--- Nuevo
+from src.backend.TFWrapper import TFWrapper
+from src.backend.StandardLib import StandardLib
 import sys
 
 class DLInterpreter(DLVisitor):
@@ -12,9 +11,6 @@ class DLInterpreter(DLVisitor):
         self.memory = {}
         self.memory_stats = {}
 
-    # =========================================
-    #      Punto de Entrada y Sentencias
-    # =========================================
     def visitProgram(self, ctx: DLParser.ProgramContext):
         return self.visitChildren(ctx)
 
@@ -44,13 +40,9 @@ class DLInterpreter(DLVisitor):
         # pero por si acaso ANTLR dejó rastro, la ignoramos o redirigimos.
         return self.visitChildren(ctx)
 
-    # =========================================
-    #      Variables y Asignaciones
-    # =========================================
     def visitVarDeclaration(self, ctx: DLParser.VarDeclarationContext):
         name = ctx.ID().getText()
         value = self.visit(ctx.expression())
-
         # Guardamos valor Y peso
         self.memory[name] = value
         self.memory_stats[name] = self._calculate_size(value)  # <--- NUEVO
@@ -62,16 +54,12 @@ class DLInterpreter(DLVisitor):
         right_node = ctx.expression(1)
         var_name = left_node.getText()
         value = self.visit(right_node)
-
         # Guardamos valor Y peso
         self.memory[var_name] = value
         self.memory_stats[var_name] = self._calculate_size(value)  # <--- NUEVO
 
         return value
 
-    # =========================================
-    #      Control de Flujo
-    # =========================================
     def visitBlock(self, ctx: DLParser.BlockContext):
         for statement in ctx.statement():
             self.visit(statement)
@@ -104,15 +92,11 @@ class DLInterpreter(DLVisitor):
             self.visit(ctx.block())
         return None
 
-    # =========================================
-    #      Funciones Nativas y Objetos
-    # =========================================
     def visitPrintStmt(self, ctx: DLParser.PrintStmtContext):
         value = self.visit(ctx.expression())
         print(value)
         return None
 
-    # --- NUEVO: Instanciación de Objetos (new Sequential) ---
     def visitAtomNew(self, ctx: DLParser.AtomNewContext):
         new_ctx = ctx.newExpr()
         class_name = new_ctx.ID().getText()
@@ -121,12 +105,10 @@ class DLInterpreter(DLVisitor):
         else:
             raise Exception(f"Clase '{class_name}' no existe.")
 
-    # --- NUEVO: Llamadas a Métodos (model.add, model.fit) ---
     def visitExprMethodCall(self, ctx: DLParser.ExprMethodCallContext):
         # Estructura: expression . ID ( args )
         obj = self.visit(ctx.expression(0))  # El objeto antes del punto
         method_name = ctx.ID().getText()
-
         # Recolectar argumentos
         args = []
         # Los argumentos empiezan desde el índice 1 de las expresiones
@@ -134,10 +116,8 @@ class DLInterpreter(DLVisitor):
         if len(ctx.expression()) > 1:
             for i in range(1, len(ctx.expression())):
                 args.append(self.visit(ctx.expression(i)))
-
         # Verificar si es nuestro Wrapper de TensorFlow
         if isinstance(obj, TFWrapper):
-            # Llamamos al método por nombre dinámicamente
             method = getattr(obj, method_name, None)
             if method:
                 return method(*args)
@@ -147,9 +127,6 @@ class DLInterpreter(DLVisitor):
         raise Exception(f"El objeto '{obj}' no tiene métodos soportados.")
 
 
-    # =========================================
-    #      Expresiones Básicas
-    # =========================================
     def visitAtomNumber(self, ctx: DLParser.AtomNumberContext):
         text = ctx.getText()
         return float(text) if '.' in text else int(text)
@@ -174,7 +151,6 @@ class DLInterpreter(DLVisitor):
                 elements.append(self.visit(expr))
         return MatrixLib.to_numpy(elements)
 
-        # --- MÉTODO CORREGIDO PARA SOPORTAR TEXTO + LISTA ---
     def visitExprAddSub(self, ctx: DLParser.ExprAddSubContext):
         left = self.visit(ctx.expression(0))
         right = self.visit(ctx.expression(1))
@@ -190,7 +166,7 @@ class DLInterpreter(DLVisitor):
             return MatrixLib.add(left, right) if is_matrix else left + right
         else:
              return MatrixLib.sub(left, right) if is_matrix else left - right
-        # ----------------------------------------------------
+
 
 
     def visitExprMultDiv(self, ctx: DLParser.ExprMultDivContext):
@@ -204,48 +180,36 @@ class DLInterpreter(DLVisitor):
         else:
             return left % right
 
-    # --- Comparaciones ---
-        # --- VERSIÓN CORREGIDA (CON MAYOR/MENOR O IGUAL) ---
     def visitExprRelational(self, ctx: DLParser.ExprRelationalContext):
         left = self.visit(ctx.expression(0))
         right = self.visit(ctx.expression(1))
 
-        if ctx.GT(): return left > right  # >
-        if ctx.LT(): return left < right  # <
-        if ctx.GTE(): return left >= right  # >=  (ESTE FALTABA)
-        if ctx.LTE(): return left <= right  # <=  (ESTE TAMBIÉN)
+        if ctx.GT(): return left > right
+        if ctx.LT(): return left < right
+        if ctx.GTE(): return left >= right
+        if ctx.LTE(): return left <= right
 
         return False
-        # ---------------------------------------------------
+
 
     def visitExprEquality(self, ctx: DLParser.ExprEqualityContext):
         left = self.visit(ctx.expression(0))
         right = self.visit(ctx.expression(1))
-        if ctx.EQ(): return left == right  # Numpy maneja == elemento a elemento, cuidado aquí
+        if ctx.EQ(): return left == right
         return left != right
 
-    # --- VERSIÓN CORREGIDA ---
     def visitStatPlot(self, ctx: DLParser.StatPlotContext):
-        # 1. Bajamos un nivel: de la sentencia general a la instrucción 'plot' específica
         plot_node = ctx.plotStmt()
-
-        # 2. Ahora sí recuperamos los argumentos de ese nodo hijo
         args = []
         if plot_node.expression():
             for expr in plot_node.expression():
                 args.append(self.visit(expr))
-
-        # 3. Llamar a la librería estándar
         return StandardLib.plot(*args)
-    # ----------------------------------------------
 
-    # --- AGREGAR ESTO EN DLInterpreter.py ---
 
     def visitExprIndex(self, ctx: DLParser.ExprIndexContext):
-        # Soporta: lista[0]  O  diccionario["clave"]
-        structure = self.visit(ctx.expression(0))  # El objeto (ej: history)
-        index = self.visit(ctx.expression(1))  # El índice (ej: "loss")
-
+        structure = self.visit(ctx.expression(0))
+        index = self.visit(ctx.expression(1))
         try:
             return structure[index]
         except TypeError:
@@ -255,15 +219,12 @@ class DLInterpreter(DLVisitor):
         except IndexError:
             raise Exception(f"Error: Índice {index} fuera de rango.")
 
-    # ----------------------------------------
     def visitExprFuncCall(self, ctx: DLParser.ExprFuncCallContext):
         func_name = ctx.ID().getText()
         args = []
         if ctx.expression():
             for expr in ctx.expression():
                 args.append(self.visit(expr))
-
-        # --- SECCIÓN DE ML Y PLOTS ---
         if func_name == "plot":
             return StandardLib.plot(*args)
         elif func_name == "read_csv":
@@ -274,49 +235,30 @@ class DLInterpreter(DLVisitor):
             return StandardLib.linear_regression(*args)
         elif func_name == "write":
             return StandardLib.write_file(*args)
-
-        # --- MATEMÁTICAS BÁSICAS ---
         elif func_name in ["sin", "cos", "tan", "log", "sqrt"]:
             return StandardLib.math_op(func_name, *args)
-
-        # --- CORRECCIÓN: ÁLGEBRA LINEAL AVANZADA (Faltaba esto) ---
         elif func_name == "transpose":
             return MatrixLib.transpose(*args)
         elif func_name == "inverse":
             return MatrixLib.inverse(*args)
         elif func_name == "slice":
-            # Uso: slice(matriz, columna_inicio, columna_fin)
             return StandardLib.slice_data(*args)
-        # ----------------------------------------------------------
         elif func_name == "memory":
             print("\n=== REPORTE DE MEMORIA RAM (EN VIVO) ===")
             print(f"{'VARIABLE':<15} | {'TIPO':<15} | {'TAMAÑO'}")
             print("-" * 45)
-
             total_usage = 0
-
-            # Iteramos sobre las variables vivas en memoria
             for name, val in self.memory.items():
-                # --- CORRECCIÓN: Recalculamos el peso AQUÍ MISMO ---
                 current_size = self._calculate_size(val)
-                self.memory_stats[name] = current_size  # Actualizamos el registro
-                # ---------------------------------------------------
-
+                self.memory_stats[name] = current_size
                 tipo = type(val).__name__
                 if isinstance(val, TFWrapper): tipo = "NeuralNetwork"
                 if isinstance(val, np.ndarray): tipo = f"Matrix {val.shape}"
-
                 print(f"{name:<15} | {tipo:<15} | {self._format_bytes(current_size)}")
                 total_usage += current_size
-
             print("-" * 45)
             print(f"TOTAL USADO: {self._format_bytes(total_usage)}\n")
             return total_usage
-
-            print("-" * 45)
-            print(f"TOTAL USADO: {self._format_bytes(total_usage)}\n")
-            return total_usage
-
         raise Exception(f"Función '{func_name}' no definida.")
 
     def _calculate_size(self, value):
@@ -325,11 +267,9 @@ class DLInterpreter(DLVisitor):
             # 1. Matrices de NumPy (tienen propiedad .nbytes exacta)
             if isinstance(value, np.ndarray):
                 return value.nbytes
-
             # 2. Modelos de Deep Learning (usamos el método que creamos)
             elif isinstance(value, TFWrapper):
                 return value.get_estimated_size()
-
             # 3. Tipos básicos (int, float, str, bool, list)
             else:
                 return sys.getsizeof(value)
@@ -337,7 +277,6 @@ class DLInterpreter(DLVisitor):
             return 0
 
     def _format_bytes(self, size):
-        # Ayuda visual para convertir bytes a KB o MB
         power = 2 ** 10
         n = 0
         power_labels = {0: '', 1: 'KB', 2: 'MB', 3: 'GB'}

@@ -1,14 +1,7 @@
 import os
-
-# --- SILENCIADOR DE TENSORFLOW ---
-# 1. Le decimos a TensorFlow que NO intente usar la GPU.
-#    Esto elimina el error "INTERNAL: CUDA Runtime error".
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-
-# 2. Elevamos el nivel de log a '3' (FATAL).
-#    0 = todos, 1 = no info, 2 = no warning, 3 = solo errores fatales.
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-# ---------------------------------
+
 
 import tensorflow as tf
 import numpy as np

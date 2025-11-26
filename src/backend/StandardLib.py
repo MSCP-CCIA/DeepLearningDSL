@@ -1,6 +1,5 @@
 import matplotlib
 
-# Forzamos backend sin cabeza para evitar errores en WSL/Server
 matplotlib.use('Agg')
 
 import matplotlib.pyplot as plt
@@ -69,7 +68,7 @@ class StandardLib:
         except Exception as e:
             print(f" ERROR EN PLOT: {e}")
 
-    # --- Resto de funciones (sin cambios) ---
+
     @staticmethod
     def read_csv(path):
         try:
@@ -87,7 +86,7 @@ class StandardLib:
     def linear_regression(x, y):
         reg = LinearRegression().fit(np.array(x).reshape(-1, 1), np.array(y))
         return [float(reg.coef_[0]), float(reg.intercept_)]
-# --- AGREGAR AL FINAL DE StandardLib ---
+
 
     @staticmethod
     def write_file(path, content):
@@ -96,7 +95,7 @@ class StandardLib:
             path = path.replace('"', '')
             with open(path, 'w') as f:
                 f.write(str(content))
-            print(f"✅ Archivo guardado: {path}")
+            print(f"Archivo guardado: {path}")
         except Exception as e:
             print(f"Error escribiendo archivo: {e}")
 
@@ -111,7 +110,7 @@ class StandardLib:
         elif op_name == "sqrt": return np.sqrt(data)
         else: return 0
 
-    # --- AGREGAR ESTO AL FINAL DE StandardLib ---
+
 
     @staticmethod
     def slice_data(data, start_col, end_col):

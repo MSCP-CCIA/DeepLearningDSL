@@ -33,12 +33,10 @@ class MatrixLib:
         if isinstance(a, np.ndarray):
             return list(a.shape)
         return []
-# --- AGREGAR ESTO AL FINAL DE MatrixLib ---
 
     @staticmethod
     def transpose(a):
         """Calcula la transpuesta (filas x columnas invertidas)"""
-        # .T es la forma rápida de numpy, pero aseguramos que sea array primero
         return np.array(a).T
 
     @staticmethod

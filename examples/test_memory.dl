@@ -1,0 +1,30 @@
+print(">>> INICIANDO PRUEBA DE GESTION DE MEMORIA <<<");
+
+// 1. Cargamos datos
+// (Asegúrate de que 'datasets/iris.csv' exista, si no saldrá como lista vacía de 56 bytes)
+var Dataset = read_csv("datasets/iris.csv");
+
+// Si no tienes el CSV a la mano, creemos datos falsos para la prueba:
+var X = [[0,0], [0,1], [1,0], [1,1]];
+var y = [[0], [1], [1], [0]];
+
+// 2. Creamos la Red
+print("Creando y compilando red neuronal...");
+var model = new Sequential();
+model.add("Dense", 512, "relu");
+model.add("Dense", 512, "relu");
+model.add("Dense", 1, "sigmoid");
+model.compile("adam", "binary_crossentropy", ["accuracy"]);
+
+print("Estado 1: Modelo definido (pero vacio en RAM)");
+memory(); // Aquí saldrá 0 bytes porque aún no sabe el tamaño de entrada
+
+// 3. EL TRUCO: Entrenar 1 sola época para inicializar los pesos
+print("Inicializando pesos con datos reales...");
+model.fit(X, y, 1);
+
+print("Estado 2: Modelo construido (Pesos cargados en RAM)");
+// 4. AHORA SÍ: Veremos el peso real
+memory();
+
+print(">>> FIN <<<");

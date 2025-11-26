@@ -1,0 +1,36 @@
+print("=== PRUEBA AVANZADA: CARGA DE DATASET CSV ===");
+
+// 1. Cargar el Dataset Externo
+print("1. Leyendo archivo 'iris_dataset.csv'...");
+var data_completa = read_csv("iris_dataset.csv");
+
+// 2. Preprocesamiento (Separar X de y)
+print("2. Separando Features (X) y Etiquetas (y)...");
+
+// slice(matriz, inicio, fin)
+// Tomamos columnas 0 a 4 para X
+var X = slice(data_completa, 0, 4);
+// Tomamos columna 4 a 5 para y (la ultima)
+var y = slice(data_completa, 4, 5);
+
+print("Dimensiones de X (debe ser matriz grande):");
+// Imprimimos solo la primera fila para no saturar la consola
+print(X);
+
+// 3. Definir Arquitectura
+print("3. Configurando Red Neuronal...");
+var model = new Sequential();
+model.add("Dense", 10, "relu");   // Capa oculta
+model.add("Dense", 1, "sigmoid"); // Salida binaria
+
+model.compile("adam", "binary_crossentropy", ["accuracy"]);
+
+// 4. Entrenar con datos reales
+print("4. Entrenando con el dataset cargado...");
+var history = model.fit(X, y, 100);
+
+// 5. Validacion
+print("5. Guardando metricas...");
+plot(history["accuracy"], "Precision_Iris");
+
+print("=== PRUEBA DE CSV COMPLETADA EXITOSAMENTE ===");

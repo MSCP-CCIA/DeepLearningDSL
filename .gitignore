@@ -1,0 +1,15 @@
+# Python / Virtual Environments
+.venv/
+__pycache__/
+*.pyc
+# IDEs
+.vscode/
+.idea/
+
+# Archivos grandes o temporales
+*.rar
+*.zip
+*.pem
+deploy_token.txt
+__MACOSX
+.DS_Store
